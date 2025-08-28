@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title }} - Interactive Blog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Post Content -->
+        <article class="card mb-4">
+            {% with all_images=post.get_all_images %}
+                {% if all_images %}
+                    {% if all_images|length == 1 %}
+                        <!-- Single image display -->
+                        <img src="{{ all_images.0.url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 400px; object-fit: cover;">
+                    {% else %}
+                        <!-- Multiple images slideshow -->
+                        <div id="post-carousel" class="carousel slide" data-bs-ride="carousel" style="max-height: 400px;">
+                            <div class="carousel-inner h-100">
+                                {% for image in all_images %}
+                                    <div class="carousel-item {% if forloop.first %}active{% endif %} h-100">
+                                        <img src="{{ image.url }}" class="d-block w-100" alt="{{ post.title }}" 
+                                             style="max-height: 400px; object-fit: cover;">
+                                        <div class="carousel-caption d-flex justify-content-between align-items-end">
+                                            <span class="badge bg-dark bg-opacity-75">
+                                                <i class="fas fa-images"></i> {{ forloop.counter }} of {{ all_images|length }}
+                                            </span>
+                                            {% if image.caption %}
+                                                <span class="badge bg-primary bg-opacity-75">
+                                                    <i class="fas fa-comment"></i> {{ image.caption }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Slideshow controls -->
+                            <button class="carousel-control-prev" type="button" data-bs-target="#post-carousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#post-carousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                            
+                            <!-- Indicators -->
+                            <div class="carousel-indicators">
+                                {% for image in all_images %}
+                                    <button type="button" data-bs-target="#post-carousel" data-bs-slide-to="{{ forloop.counter0 }}" 
+                                            {% if forloop.first %}class="active" aria-current="true"{% endif %} 
+                                            aria-label="Slide {{ forloop.counter }}"></button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="card-body">
+                <h1 class="card-title">{{ post.title }}</h1>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3 text-muted">
+                    <div>
+                        <i class="fas fa-user"></i> By {{ post.author.username }}
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y \a\t H:i" }}
+                        {% if post.updated_at != post.created_at %}
+                            <span class="ms-2"><i class="fas fa-edit"></i> Updated {{ post.updated_at|date:"M d, Y" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Post Management Buttons (Only for post author) -->
+                {% if user.is_authenticated and user == post.author %}
+                    <div class="mb-3">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'edit_post' post.pk %}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-edit"></i> Edit Post
+                            </a>
+                            <a href="{% url 'delete_post' post.pk %}" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-trash"></i> Delete Post
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="post-content">
+                    {{ post.content|linebreaks }}
+                </div>
+            </div>
+        </article>
+
+        <!-- Like/Dislike Section -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <h5 class="card-title">Did you like this post?</h5>
+                
+                {% if user.is_authenticated %}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn {% if user_reaction == 'like' %}btn-success{% else %}btn-outline-success{% endif %} like-btn" 
+                                data-post-id="{{ post.pk }}" data-action="like">
+                            <i class="fas fa-thumbs-up"></i> Like (<span id="likes-count">{{ post.total_likes }}</span>)
+                        </button>
+                        <button type="button" class="btn {% if user_reaction == 'dislike' %}btn-danger{% else %}btn-outline-danger{% endif %} dislike-btn" 
+                                data-post-id="{{ post.pk }}" data-action="dislike">
+                            <i class="fas fa-thumbs-down"></i> Dislike (<span id="dislikes-count">{{ post.total_dislikes }}</span>)
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="btn-group" role="group">
+                        <span class="btn btn-outline-success">
+                            <i class="fas fa-thumbs-up"></i> {{ post.total_likes }} Likes
+                        </span>
+                        <span class="btn btn-outline-danger">
+                            <i class="fas fa-thumbs-down"></i> {{ post.total_dislikes }} Dislikes
+                        </span>
+                    </div>
+                    <p class="text-muted mt-2">
+                        <a href="{% url 'login' %}">Login</a> to like or dislike this post
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-comments"></i> Comments ({{ comments.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if user.is_authenticated %}
+                    <!-- Add Comment Form -->
+                    <form method="post" action="{% url 'add_comment' post.pk %}" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ comment_form.content.id_for_label }}" class="form-label">Add a comment:</label>
+                            {{ comment_form.content }}
+                            {% if comment_form.content.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in comment_form.content.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Post Comment
+                        </button>
+                    </form>
+                    <hr>
+                {% endif %}
+
+                <!-- Display Comments -->
+                {% for comment in comments %}
+                    <div class="comment mb-3" id="comment-{{ comment.id }}">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="bg-light p-3 rounded">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>{{ comment.author.username }}</strong>
+                                        <small class="text-muted">{{ comment.created_at|date:"M d, Y \a\t H:i" }}</small>
+                                    </div>
+                                    <p class="mb-2">{{ comment.content|linebreaks }}</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {% if user.is_authenticated %}
+                                                <button type="button" class="btn btn-sm btn-outline-primary reply-btn" 
+                                                        data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-reply"></i> Reply
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Comment Management Buttons (Only for comment author) -->
+                                        {% if user.is_authenticated and user == comment.author %}
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'edit_comment' comment.pk %}" class="btn btn-outline-success btn-sm">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <a href="{% url 'delete_comment' comment.pk %}" class="btn btn-outline-danger btn-sm">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Reply Form (Hidden by default) -->
+                                {% if user.is_authenticated %}
+                                    <div class="reply-form mt-2" id="reply-form-{{ comment.id }}" style="display: none;">
+                                        <form method="post" action="{% url 'add_comment' post.pk %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                            <div class="mb-2">
+                                                <textarea class="form-control" name="content" rows="2" placeholder="Write a reply..." required></textarea>
+                                            </div>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fas fa-paper-plane"></i> Reply
+                                                </button>
+                                                <button type="button" class="btn btn-secondary cancel-reply" data-comment-id="{{ comment.id }}">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Display Replies -->
+                                {% for reply in comment.get_replies %}
+                                    <div class="reply mt-3 ms-4">
+                                        <div class="d-flex">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-user text-white" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-2">
+                                                <div class="bg-light p-2 rounded">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <strong style="font-size: 0.9rem;">{{ reply.author.username }}</strong>
+                                                        <small class="text-muted">{{ reply.created_at|date:"M d, Y \a\t H:i" }}</small>
+                                                    </div>
+                                                    <p class="mb-2" style="font-size: 0.9rem;">{{ reply.content|linebreaks }}</p>
+                                                    
+                                                    <!-- Reply Management Buttons (Only for reply author) -->
+                                                    {% if user.is_authenticated and user == reply.author %}
+                                                        <div class="d-flex justify-content-end">
+                                                            <div class="btn-group btn-group-sm" role="group">
+                                                                <a href="{% url 'edit_comment' reply.pk %}" class="btn btn-outline-success btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.4rem;">
+                                                                    <i class="fas fa-edit"></i> Edit
+                                                                </a>
+                                                                <a href="{% url 'delete_comment' reply.pk %}" class="btn btn-outline-danger btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.4rem;">
+                                                                    <i class="fas fa-trash"></i> Delete
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% if not forloop.last %}<hr>{% endif %}
+                {% empty %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-comments fa-2x mb-2"></i>
+                        <p>No comments yet. Be the first to comment!</p>
+                        {% if not user.is_authenticated %}
+                            <p><a href="{% url 'login' %}">Login</a> to add a comment.</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Post Info</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Author:</strong> {{ post.author.username }}</p>
+                <p><strong>Published:</strong> {{ post.created_at|date:"F d, Y" }}</p>
+                {% if post.updated_at != post.created_at %}
+                    <p><strong>Updated:</strong> {{ post.updated_at|date:"F d, Y" }}</p>
+                {% endif %}
+                <p><strong>Comments:</strong> {{ comments.count }}</p>
+                <p><strong>Likes:</strong> {{ post.total_likes }}</p>
+                <p><strong>Dislikes:</strong> {{ post.total_dislikes }}</p>
+                
+                <hr>
+                <a href="{% url 'post_list' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to Posts
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

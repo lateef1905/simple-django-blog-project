@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Post: {{ post.title }} - BlogSpot{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4><i class="fas fa-exclamation-triangle"></i> Delete Blog Post</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All comments and likes on this post will also be deleted.
+                </div>
+                
+                <div class="post-preview border rounded p-3 mb-4 bg-light">
+                    <h5>{{ post.title }}</h5>
+                    <div class="d-flex justify-content-between small text-muted mb-2">
+                        <span><i class="fas fa-user"></i> {{ post.author.username }}</span>
+                        <span><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
+                    </div>
+                    {% if post.image %}
+                        <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded mb-2" style="max-height: 150px;">
+                    {% endif %}
+                    <p>{{ post.content|truncatewords:30|linebreaks }}</p>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span><i class="fas fa-thumbs-up"></i> {{ post.total_likes }} likes</span>
+                        <span><i class="fas fa-thumbs-down"></i> {{ post.total_dislikes }} dislikes</span>
+                        <span><i class="fas fa-comments"></i> {{ post.comments.count }} comments</span>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <p class="mb-3"><strong>Are you sure you want to delete this post?</strong></p>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger me-2">
+                            <i class="fas fa-trash"></i> Yes, Delete Post
+                        </button>
+                    </form>
+                    
+                    <a href="{% url 'post_detail' post.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .post-preview {
+        background-color: #f8f9fa !important;
+    }
+    
+    .card {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border-radius: 0.75rem;
+    }
+    
+    .card-header {
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+</style>
+{% endblock %}

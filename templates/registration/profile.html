@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - Interactive Blog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4><i class="fas fa-user-circle fa-2x"></i></h4>
+                <h5>{{ user.username }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h3 class="text-primary">{{ total_posts }}</h3>
+                            <small class="text-muted">Posts</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="text-success">{{ total_comments }}</h3>
+                        <small class="text-muted">Comments</small>
+                    </div>
+                </div>
+                <hr>
+                <p><strong>Member since:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
+                <p><strong>Last login:</strong> {{ user.last_login|date:"F d, Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- User Posts -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-blog"></i> My Posts ({{ total_posts }})</h5>
+            </div>
+            <div class="card-body">
+                {% if user_posts %}
+                    <div class="row">
+                        {% for post in user_posts %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    {% if post.image %}
+                                        <img src="{{ post.image.url }}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <a href="{% url 'post_detail' post.pk %}" class="text-decoration-none">
+                                                {{ post.title }}
+                                            </a>
+                                        </h6>
+                                        <p class="card-text small">{{ post.content|truncatewords:15 }}</p>
+                                        <div class="d-flex justify-content-between small text-muted">
+                                            <span><i class="fas fa-thumbs-up"></i> {{ post.total_likes }}</span>
+                                            <span><i class="fas fa-comments"></i> {{ post.comments.count }}</span>
+                                            <span>{{ post.created_at|date:"M d" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-edit fa-2x mb-2"></i>
+                        <p>You haven't written any posts yet.</p>
+                        <a href="{% url 'admin:posts_blogpost_add' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Create Your First Post
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- User Comments -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-comments"></i> Recent Comments ({{ total_comments }})</h5>
+            </div>
+            <div class="card-body">
+                {% if user_comments %}
+                    {% for comment in user_comments|slice:":5" %}
+                        <div class="mb-3 p-2 border-start border-primary border-3">
+                            <p class="mb-1">{{ comment.content|truncatewords:20 }}</p>
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>On: 
+                                    <a href="{% url 'post_detail' comment.post.pk %}" class="text-decoration-none">
+                                        {{ comment.post.title }}
+                                    </a>
+                                </span>
+                                <span>{{ comment.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    {% if user_comments.count > 5 %}
+                        <p class="text-center text-muted">
+                            <small>... and {{ user_comments.count|add:"-5" }} more comments</small>
+                        </p>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-comment fa-2x mb-2"></i>
+                        <p>You haven't made any comments yet.</p>
+                        <a href="{% url 'post_list' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-arrow-right"></i> Browse Posts to Comment
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-start {
+        border-left: 3px solid var(--bs-primary) !important;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border-radius: 0.5rem;
+    }
+    
+    .card-img-top {
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+</style>
+{% endblock %}
