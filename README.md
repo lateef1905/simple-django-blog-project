@@ -1,4 +1,4 @@
-# Interactive Blog Web Application
+# BlogSpot Web Application
 
 A full-featured blog platform built with Django that allows users to read posts, react with likes/dislikes, comment, and reply to comments.
 
