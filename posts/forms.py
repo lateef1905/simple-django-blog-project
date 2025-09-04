@@ -1,9 +1,12 @@
 from django import forms
 from django.forms import modelformset_factory
 from .models import BlogPost, Comment, BlogPostImage
+from ckeditor_uploader.widgets import CKEditorUploadingWidget
 
 
 class BlogPostForm(forms.ModelForm):
+    content = forms.CharField(widget=CKEditorUploadingWidget(config_name='special'))
+    
     class Meta:
         model = BlogPost
         fields = ['title', 'content', 'image']
@@ -13,12 +16,7 @@ class BlogPostForm(forms.ModelForm):
                 'placeholder': 'Enter an engaging title for your post...',
                 'maxlength': '200'
             }),
-            'content': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 12,
-                'placeholder': 'Write your blog post content here... You can use line breaks for paragraphs.',
-                'style': 'resize: vertical;'
-            }),
+            # content field is handled above with CKEditorUploadingWidget
             'image': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': 'image/*'
@@ -31,7 +29,7 @@ class BlogPostForm(forms.ModelForm):
         }
         help_texts = {
             'title': 'Choose a catchy title that summarizes your post (max 200 characters)',
-            'content': 'Write your complete blog post. Use paragraphs to organize your thoughts.',
+            'content': 'Write your complete blog post using the rich text editor with all formatting options.',
             'image': 'Upload a featured image for your post (JPG, PNG, GIF supported)'
         }
 
